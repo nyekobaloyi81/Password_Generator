@@ -51,6 +51,7 @@ class PasswordGeneratorApp:
         ttk.Label(length_row, text="Password length").pack(side="left")
         ttk.Spinbox(length_row, from_=4, to=24, textvariable=self.length, width=8).pack(side="right")
 
+        #Password Box
         password_box = ttk.Frame(outer, padding=16)
         password_box.pack(fill="x", pady=(26, 22))
         ttk.Label(password_box, text="YOUR PASSWORD", style="Muted.TLabel").pack(anchor="w", pady=(0, 9))
@@ -64,12 +65,24 @@ class PasswordGeneratorApp:
         )
         self.password_entry.pack(fill="x", ipady=10)
 
+        #Generate Password button
         ttk.Button(
             outer,
             text="Generate password",
             style="Generate.TButton",
             command=self.generate,
         ).pack(fill="x")
+
+        #Copy Password button
+        ttk.Button(
+            password_box, 
+            text="Copy password", 
+            style="Copy.TButton", 
+            command=self.copy_password,
+            ).pack(fill="x")
+
+        self.status = ttk.Label(outer, text="Your password is generated securely on this device.", style="Muted.TLabel")
+        self.status.pack(anchor="center", pady=(12, 0))
 
         self.generate()
 
@@ -85,6 +98,14 @@ class PasswordGeneratorApp:
             return
 
         self.password.set(generate_password(user_length))
+
+    def copy_password(self) -> None:
+        value = self.password.get()
+        if not value:
+            return
+        self.root.clipboard_clear()
+        self.root.clipboard_append(value)
+        self.status.configure(text="Password copied to clipboard.")
 
 def main():
     root = tk.Tk()
