@@ -18,82 +18,92 @@ class PasswordGeneratorApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("Password Generator")
-        self.root.geometry("480x590")
-        self.root.minsize(440, 550)
-        self.root.configure(bg="#f3f5f9")
+        self.root.geometry("520x660")
+        self.root.minsize(460, 600)
         self.is_dark = False
 
         self.length = tk.IntVar(value=16)
         self.style = ttk.Style()
         self.style.theme_use("clam")
-        self.style.configure("TFrame", background="#ffffff")
-        self.style.configure("TLabel", background="#ffffff", foreground="#172033", font=("Segoe UI", 10))
-        self.style.configure("Title.TLabel", font=("Segoe UI", 21, "bold"), foreground="#172033")
-        self.style.configure("Muted.TLabel", foreground="#687386", font=("Segoe UI", 10))
-        self.style.configure("TCheckbutton", background="#ffffff", foreground="#283449", font=("Segoe UI", 10))
-        self.style.map("TCheckbutton", background=[("active", "#ffffff")])
-        self.style.configure(
-            "Generate.TButton",
-            background="#4263eb",
-            foreground="#ffffff",
-            font=("Segoe UI", 11, "bold"),
-            padding=(12, 11),
-            borderwidth=0,
+        outer = ttk.Frame(root, padding=30, style="App.TFrame")
+        outer.pack(fill="both", expand=True)
+
+        header = ttk.Frame(outer, style="App.TFrame")
+        header.pack(fill="x", pady=(0, 28))
+        self.theme_button = ttk.Button(
+            header,
+            text="Dark mode",
+            style="Theme.TButton",
+            command=self.change_theme,
         )
-        self.style.map("Copy.TButton", background=[("active", "#e0e7ff")])
+        self.theme_button.pack(side="right")
 
-        outer = ttk.Frame(root, padding=24)
-        outer.pack(fill="both", expand=True, padx=18, pady=18)
+        ttk.Label(outer, text="Password generator", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="Create a strong, unique password in seconds.",
+            style="Subtitle.TLabel",
+        ).pack(anchor="w", pady=(5, 24))
 
-        ttk.Label(outer, text="Password Generator", style="Title.TLabel").pack(anchor="w", pady=(2, 4))
-        ttk.Label(outer, text="Create a strong password in seconds.", style="Muted.TLabel").pack(anchor="w")
-        length_row = ttk.Frame(outer)
-        length_row.pack(fill="x", pady=(20, 0))
-        ttk.Label(length_row, text="Password length").pack(side="left")
-        ttk.Spinbox(length_row, from_=4, to=24, textvariable=self.length, width=8).pack(side="right")
+        password_box = ttk.Frame(
+            outer,
+            padding=22,
+            style="Card.TFrame",
+            relief="solid",
+            borderwidth=1,
+        )
+        password_box.pack(fill="x", pady=(0, 18))
 
-        #Password Box
-        password_box = ttk.Frame(outer, padding=16)
-        password_box.pack(fill="x", pady=(26, 22))
-        ttk.Label(password_box, text="YOUR PASSWORD", style="Muted.TLabel").pack(anchor="w", pady=(0, 9))
+        length_row = ttk.Frame(password_box, style="Card.TFrame")
+        length_row.pack(fill="x")
+        ttk.Label(length_row, text="Password length", style="FieldLabel.TLabel").pack(side="left")
+        ttk.Spinbox(
+            length_row,
+            from_=4,
+            to=24,
+            textvariable=self.length,
+            width=7,
+            justify="center",
+            style="Field.TSpinbox",
+        ).pack(side="right")
+
+        ttk.Separator(password_box).pack(fill="x", pady=20)
+        ttk.Label(password_box, text="Generated Password", style="Eyebrow.TLabel").pack(
+            anchor="w",
+            pady=(0, 10),
+        )
         self.password = tk.StringVar()
         self.password_entry = ttk.Entry(
             password_box,
             textvariable=self.password,
             state="readonly",
-            font=("Consolas", 14),
-            justify="center",
+            font=("Consolas", 17),
+            style="Password.TEntry",
         )
-        self.password_entry.pack(fill="x", ipady=10)
+        self.password_entry.pack(fill="x", ipady=12)
 
-        #Generate Password button
         ttk.Button(
             outer,
-            text="Generate password",
+            text="Generate new password",
             style="Generate.TButton",
             command=self.generate,
-        ).pack(fill="x")
+        ).pack(fill="x", ipady=3)
 
-        #Copy Password button
         ttk.Button(
-            password_box, 
-            text="Copy password", 
-            style="Copy.TButton", 
-            command=self.copy_password,
-            ).pack(fill="x")
-
-        #change theme = lightmode / darkmode
-        self.theme_button = ttk.Button(
             outer,
-            text="Switch to dark mode",
+            text="Copy to clipboard",
             style="Copy.TButton",
-            command=self.change_theme,
+            command=self.copy_password,
+        ).pack(fill="x", pady=(10, 0))
+
+        self.status = ttk.Label(
+            outer,
+            text="Generated locally. Nothing is stored.",
+            style="Status.TLabel",
         )
-        self.theme_button.pack(fill="x", pady=(10, 0))
+        self.status.pack(anchor="center", pady=(24, 0))
 
-        self.status = ttk.Label(outer, text="Your password is generated securely on this device.", style="Muted.TLabel")
-        self.status.pack(anchor="center", pady=(12, 0))
-
+        self._apply_theme()
         self.generate()
 
     def generate(self) -> None:
@@ -119,37 +129,103 @@ class PasswordGeneratorApp:
 
     def change_theme(self) -> None:
         self.is_dark = not self.is_dark
+        self._apply_theme()
+
+    def _apply_theme(self) -> None:
         if self.is_dark:
             window_bg = "#111827"
-            surface = "#1f2937"
+            surface = "#1b2638"
             foreground = "#f9fafb"
-            muted = "#aab4c3"
+            muted = "#a8b3c5"
+            border = "#334155"
             field_bg = "#111827"
-            copy_bg = "#374151"
-            copy_active = "#4b5563"
+            field_muted = "#94a3b8"
+            copy_bg = "#263449"
+            copy_active = "#33445d"
+            accent = "#818cf8"
+            accent_active = "#6366f1"
         else:
-            window_bg = "#f3f5f9"
+            window_bg = "#f4f6fb"
             surface = "#ffffff"
             foreground = "#172033"
-            muted = "#687386"
-            field_bg = "#ffffff"
-            copy_bg = "#ffffff"
+            muted = "#667085"
+            border = "#e4e7ec"
+            field_bg = "#f8fafc"
+            field_muted = "#667085"
+            copy_bg = "#eef2ff"
             copy_active = "#e0e7ff"
+            accent = "#4f46e5"
+            accent_active = "#4338ca"
 
         self.root.configure(bg=window_bg)
-        self.style.configure("TFrame", background=surface)
-        self.style.configure("TLabel", background=surface, foreground=foreground)
-        self.style.configure("Title.TLabel", foreground=foreground)
-        self.style.configure("Muted.TLabel", foreground=muted)
-        self.style.configure("TCheckbutton", background=surface, foreground=foreground)
-        self.style.map("TCheckbutton", background=[("active", surface)])
-        self.style.configure("TEntry", fieldbackground=field_bg, foreground=foreground)
-        self.style.configure("TSpinbox", fieldbackground=field_bg, foreground=foreground)
-        self.style.configure("Copy.TButton", background=copy_bg, foreground=foreground)
-        self.style.map("Copy.TButton", background=[("active", copy_active)])
-        self.theme_button.configure(
-            text="Switch to light mode" if self.is_dark else "Switch to dark mode"
+        self.style.configure("App.TFrame", background=window_bg)
+        self.style.configure(
+            "Card.TFrame",
+            background=surface,
+            bordercolor=border,
+            lightcolor=border,
+            darkcolor=border,
         )
+        self.style.configure("Title.TLabel", background=window_bg, foreground=foreground, font=("Segoe UI", 25, "bold"))
+        self.style.configure("Subtitle.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 10))
+        self.style.configure("Eyebrow.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 9, "bold"))
+        self.style.configure("FieldLabel.TLabel", background=surface, foreground=foreground, font=("Segoe UI", 10, "bold"))
+        self.style.configure("Status.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 9))
+        self.style.configure("TSeparator", background=border)
+        self.style.configure(
+            "Password.TEntry",
+            fieldbackground=field_bg,
+            foreground=foreground,
+            insertcolor=foreground,
+            bordercolor=border,
+            lightcolor=border,
+            darkcolor=border,
+            padding=10,
+        )
+        self.style.map(
+            "Password.TEntry",
+            fieldbackground=[("readonly", field_bg)],
+            foreground=[("readonly", foreground)],
+        )
+        self.style.configure(
+            "Field.TSpinbox",
+            fieldbackground=field_bg,
+            foreground=foreground,
+            arrowcolor=muted,
+            bordercolor=border,
+            lightcolor=border,
+            darkcolor=border,
+            padding=5,
+            font=("Segoe UI", 10),
+        )
+        self.style.configure(
+            "Generate.TButton",
+            background=accent,
+            foreground="#ffffff" if not self.is_dark else "#111827",
+            font=("Segoe UI", 11, "bold"),
+            padding=(14, 12),
+            borderwidth=0,
+        )
+        self.style.map("Generate.TButton", background=[("active", accent_active)])
+        self.style.configure(
+            "Copy.TButton",
+            background=copy_bg,
+            foreground=foreground,
+            font=("Segoe UI", 10, "bold"),
+            padding=(12, 10),
+            borderwidth=0,
+        )
+        self.style.map("Copy.TButton", background=[("active", copy_active)])
+        self.style.configure(
+            "Theme.TButton",
+            background=surface,
+            foreground=field_muted,
+            font=("Segoe UI", 9, "bold"),
+            padding=(10, 6),
+            borderwidth=1,
+        )
+        self.style.map("Theme.TButton", background=[("active", copy_active)])
+        self.theme_button.configure(text="Light mode" if self.is_dark else "Dark mode")
 
 def main():
     root = tk.Tk()
