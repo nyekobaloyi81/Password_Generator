@@ -21,17 +21,18 @@ class PasswordGeneratorApp:
         self.root.geometry("480x590")
         self.root.minsize(440, 550)
         self.root.configure(bg="#f3f5f9")
+        self.is_dark = False
 
         self.length = tk.IntVar(value=16)
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("TFrame", background="#ffffff")
-        style.configure("TLabel", background="#ffffff", foreground="#172033", font=("Segoe UI", 10))
-        style.configure("Title.TLabel", font=("Segoe UI", 21, "bold"), foreground="#172033")
-        style.configure("Muted.TLabel", foreground="#687386", font=("Segoe UI", 10))
-        style.configure("TCheckbutton", background="#ffffff", foreground="#283449", font=("Segoe UI", 10))
-        style.map("TCheckbutton", background=[("active", "#ffffff")])
-        style.configure(
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("TFrame", background="#ffffff")
+        self.style.configure("TLabel", background="#ffffff", foreground="#172033", font=("Segoe UI", 10))
+        self.style.configure("Title.TLabel", font=("Segoe UI", 21, "bold"), foreground="#172033")
+        self.style.configure("Muted.TLabel", foreground="#687386", font=("Segoe UI", 10))
+        self.style.configure("TCheckbutton", background="#ffffff", foreground="#283449", font=("Segoe UI", 10))
+        self.style.map("TCheckbutton", background=[("active", "#ffffff")])
+        self.style.configure(
             "Generate.TButton",
             background="#4263eb",
             foreground="#ffffff",
@@ -39,7 +40,7 @@ class PasswordGeneratorApp:
             padding=(12, 11),
             borderwidth=0,
         )
-        style.map("Copy.TButton", background=[("active", "#e0e7ff")])
+        self.style.map("Copy.TButton", background=[("active", "#e0e7ff")])
 
         outer = ttk.Frame(root, padding=24)
         outer.pack(fill="both", expand=True, padx=18, pady=18)
@@ -81,6 +82,15 @@ class PasswordGeneratorApp:
             command=self.copy_password,
             ).pack(fill="x")
 
+        #change theme = lightmode / darkmode
+        self.theme_button = ttk.Button(
+            outer,
+            text="Switch to dark mode",
+            style="Copy.TButton",
+            command=self.change_theme,
+        )
+        self.theme_button.pack(fill="x", pady=(10, 0))
+
         self.status = ttk.Label(outer, text="Your password is generated securely on this device.", style="Muted.TLabel")
         self.status.pack(anchor="center", pady=(12, 0))
 
@@ -106,6 +116,40 @@ class PasswordGeneratorApp:
         self.root.clipboard_clear()
         self.root.clipboard_append(value)
         self.status.configure(text="Password copied to clipboard.")
+
+    def change_theme(self) -> None:
+        self.is_dark = not self.is_dark
+        if self.is_dark:
+            window_bg = "#111827"
+            surface = "#1f2937"
+            foreground = "#f9fafb"
+            muted = "#aab4c3"
+            field_bg = "#111827"
+            copy_bg = "#374151"
+            copy_active = "#4b5563"
+        else:
+            window_bg = "#f3f5f9"
+            surface = "#ffffff"
+            foreground = "#172033"
+            muted = "#687386"
+            field_bg = "#ffffff"
+            copy_bg = "#ffffff"
+            copy_active = "#e0e7ff"
+
+        self.root.configure(bg=window_bg)
+        self.style.configure("TFrame", background=surface)
+        self.style.configure("TLabel", background=surface, foreground=foreground)
+        self.style.configure("Title.TLabel", foreground=foreground)
+        self.style.configure("Muted.TLabel", foreground=muted)
+        self.style.configure("TCheckbutton", background=surface, foreground=foreground)
+        self.style.map("TCheckbutton", background=[("active", surface)])
+        self.style.configure("TEntry", fieldbackground=field_bg, foreground=foreground)
+        self.style.configure("TSpinbox", fieldbackground=field_bg, foreground=foreground)
+        self.style.configure("Copy.TButton", background=copy_bg, foreground=foreground)
+        self.style.map("Copy.TButton", background=[("active", copy_active)])
+        self.theme_button.configure(
+            text="Switch to light mode" if self.is_dark else "Switch to dark mode"
+        )
 
 def main():
     root = tk.Tk()
