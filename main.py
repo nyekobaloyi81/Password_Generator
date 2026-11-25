@@ -1,17 +1,7 @@
-import secrets
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-CHARACTER_SETS = {
-    "lowercase": "abcdefghijklmnopqrstuvwxyz",
-    "uppercase": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "numbers": "0123456789",
-    "symbols": "!@#$%^&*()-_=+[]{};:,.?/|~",
-}
-
-def generate_password(length: int) -> str:
-    characters = "".join(CHARACTER_SETS.values())
-    return "".join(secrets.choice(characters) for _ in range(length))
+from password import estimate_entropy, generate_password
 
 
 class PasswordGeneratorApp:
@@ -21,8 +11,14 @@ class PasswordGeneratorApp:
         self.root.geometry("520x660")
         self.root.minsize(460, 600)
         self.is_dark = False
+        self.clipboard_clear_job = None
+        self.copied_password = ""
 
         self.length = tk.IntVar(value=16)
+        self.include_lowercase = tk.BooleanVar(value=True)
+        self.include_uppercase = tk.BooleanVar(value=True)
+        self.include_numbers = tk.BooleanVar(value=True)
+        self.include_symbols = tk.BooleanVar(value=True)
         self.style = ttk.Style()
         self.style.theme_use("clam")
         outer = ttk.Frame(root, padding=30, style="App.TFrame")
@@ -60,7 +56,7 @@ class PasswordGeneratorApp:
         ttk.Spinbox(
             length_row,
             from_=4,
-            to=24,
+            to=128,
             textvariable=self.length,
             width=7,
             justify="center",
@@ -68,6 +64,37 @@ class PasswordGeneratorApp:
         ).pack(side="right")
 
         ttk.Separator(password_box).pack(fill="x", pady=20)
+        ttk.Label(password_box, text="Character types", style="Eyebrow.TLabel").pack(
+            anchor="w",
+            pady=(0, 8),
+        )
+        category_row = ttk.Frame(password_box, style="Card.TFrame")
+        category_row.pack(fill="x", pady=(0, 10))
+        ttk.Checkbutton(
+            category_row,
+            text="A-Z",
+            variable=self.include_uppercase,
+            style="Category.TCheckbutton",
+        ).pack(side="left", padx=(0, 12))
+        ttk.Checkbutton(
+            category_row,
+            text="a-z",
+            variable=self.include_lowercase,
+            style="Category.TCheckbutton",
+        ).pack(side="left", padx=(0, 12))
+        ttk.Checkbutton(
+            category_row,
+            text="0-9",
+            variable=self.include_numbers,
+            style="Category.TCheckbutton",
+        ).pack(side="left", padx=(0, 12))
+        ttk.Checkbutton(
+            category_row,
+            text="Symbols",
+            variable=self.include_symbols,
+            style="Category.TCheckbutton",
+        ).pack(side="left")
+
         ttk.Label(password_box, text="Generated Password", style="Eyebrow.TLabel").pack(
             anchor="w",
             pady=(0, 10),
@@ -105,19 +132,59 @@ class PasswordGeneratorApp:
 
         self._apply_theme()
         self.generate()
+        self.root.bind("<Control-g>", self._generate_shortcut)
+        self.root.bind("<Control-Shift-C>", self._copy_shortcut)
+
+    def _generate_shortcut(self, event: tk.Event) -> str:
+        del event
+        self.generate()
+        return "break"
+
+    def _copy_shortcut(self, event: tk.Event) -> str:
+        del event
+        self.copy_password()
+        return "break"
 
     def generate(self) -> None:
         try:
             user_length = self.length.get()
         except tk.TclError:
-            messagebox.showerror("Invalid length", "Enter a whole number between 4 and 24.")
+            messagebox.showerror("Invalid length", "Enter a whole number between 4 and 128.")
             return
 
-        if not 4 <= user_length <= 24:
-            messagebox.showerror("Invalid length", "Password length must be between 4 and 24.")
+        if not 4 <= user_length <= 128:
+            messagebox.showerror("Invalid length", "Password length must be between 4 and 128.")
             return
 
-        self.password.set(generate_password(user_length))
+        categories = []
+        if self.include_lowercase.get():
+            categories.append("lowercase")
+        if self.include_uppercase.get():
+            categories.append("uppercase")
+        if self.include_numbers.get():
+            categories.append("numbers")
+        if self.include_symbols.get():
+            categories.append("symbols")
+
+        if not categories:
+            messagebox.showerror("No character types", "Select at least one character type.")
+            return
+        if user_length < len(categories):
+            messagebox.showerror(
+                "Invalid length",
+                f"Use at least {len(categories)} characters to include every selected type.",
+            )
+            return
+
+        try:
+            value = generate_password(user_length, categories)
+        except ValueError as error:
+            messagebox.showerror("Unable to generate password", str(error))
+            return
+
+        self.password.set(value)
+        entropy = estimate_entropy(user_length, categories)
+        self.status.configure(text=f"Generated locally. Estimated entropy: {entropy:.0f} bits.")
 
     def copy_password(self) -> None:
         value = self.password.get()
@@ -125,7 +192,23 @@ class PasswordGeneratorApp:
             return
         self.root.clipboard_clear()
         self.root.clipboard_append(value)
+        self.copied_password = value
         self.status.configure(text="Password copied to clipboard.")
+        if self.clipboard_clear_job is not None:
+            self.root.after_cancel(self.clipboard_clear_job)
+        self.clipboard_clear_job = self.root.after(60_000, self.clear_clipboard)
+
+    def clear_clipboard(self) -> None:
+        try:
+            current = self.root.clipboard_get()
+            if current == self.copied_password:
+                self.root.clipboard_clear()
+                self.status.configure(text="Password cleared from the clipboard.")
+                self.copied_password = ""
+        except tk.TclError:
+            pass
+        finally:
+            self.clipboard_clear_job = None
 
     def change_theme(self) -> None:
         self.is_dark = not self.is_dark
@@ -168,8 +251,14 @@ class PasswordGeneratorApp:
         )
         self.style.configure("Title.TLabel", background=window_bg, foreground=foreground, font=("Segoe UI", 25, "bold"))
         self.style.configure("Subtitle.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 10))
-        self.style.configure("Eyebrow.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 9, "bold"))
+        self.style.configure("Eyebrow.TLabel", background=surface, foreground=muted, font=("Segoe UI", 9, "bold"))
         self.style.configure("FieldLabel.TLabel", background=surface, foreground=foreground, font=("Segoe UI", 10, "bold"))
+        self.style.configure(
+            "Category.TCheckbutton",
+            background=surface,
+            foreground=foreground,
+            font=("Segoe UI", 9),
+        )
         self.style.configure("Status.TLabel", background=window_bg, foreground=muted, font=("Segoe UI", 9))
         self.style.configure("TSeparator", background=border)
         self.style.configure(

@@ -1,0 +1,7 @@
+[project]
+name = "password-generator"
+version = "1.0.0"
+requires-python = ">=3.9"
+
+[tool.unittest]
+testpaths = ["."]
