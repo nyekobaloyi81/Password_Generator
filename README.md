@@ -1,5 +1,7 @@
 # Password Generator
 
+<img width="520" height="688" alt="random password" src="https://github.com/user-attachments/assets/6f2eb7e5-92c1-4173-be9b-c2c13cdab246" />
+
 A desktop password generator built with Python and Tkinter. It uses
 `secrets` and the operating system cryptographic random source to generate
 passwords locally.
